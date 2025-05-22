@@ -1,5 +1,5 @@
 streamlit
-keras
-h5py
+torch
+torchvision
 numpy
 Pillow
