@@ -1,57 +1,25 @@
 import streamlit as st
-import torch
-import torch.nn as nn
-from torchvision.utils import make_grid
-import matplotlib.pyplot as plt
 import numpy as np
+import tensorflow as tf
+import matplotlib.pyplot as plt
 
-# Generator model (same architecture as used in training)
-class Generator(nn.Module):
-    def __init__(self, nz=100, ngf=64, nc=3):
-        super(Generator, self).__init__()
-        self.main = nn.Sequential(
-            nn.ConvTranspose2d(nz, ngf * 8, 4, 1, 0, bias=False),
-            nn.BatchNorm2d(ngf * 8),
-            nn.ReLU(True),
-            nn.ConvTranspose2d(ngf * 8, ngf * 4, 4, 2, 1, bias=False),
-            nn.BatchNorm2d(ngf * 4),
-            nn.ReLU(True),
-            nn.ConvTranspose2d(ngf * 4, ngf * 2, 4, 2, 1, bias=False),
-            nn.BatchNorm2d(ngf * 2),
-            nn.ReLU(True),
-            nn.ConvTranspose2d(ngf * 2, ngf, 4, 2, 1, bias=False),
-            nn.BatchNorm2d(ngf),
-            nn.ReLU(True),
-            nn.ConvTranspose2d(ngf, nc, 4, 2, 1, bias=False),
-            nn.Tanh()
-        )
-
-    def forward(self, input):
-        return self.main(input)
-
-# Load Generator
+# Load the generator model
 @st.cache_resource
-def load_generator(weights_path):
-    netG = Generator()
-    netG.load_state_dict(torch.load(weights_path, map_location=torch.device('cpu')))
-    netG.eval()
-    return netG
+def load_generator(model_path="models/g_model.h5"):
+    return tf.keras.models.load_model(model_path)
 
-# Generate image
-def generate_image(model, nz=100):
-    noise = torch.randn(1, nz, 1, 1)
-    with torch.no_grad():
-        fake_img = model(noise).detach().cpu()
-    return fake_img
+# Generate an image using the generator
+def generate_image(model, latent_dim=100):
+    noise = np.random.normal(0, 1, (1, latent_dim))
+    generated_image = model.predict(noise)[0]
+    generated_image = (generated_image + 1) / 2.0  # Rescale from [-1, 1] to [0, 1]
+    return generated_image
 
 # Streamlit UI
-st.title("Anime Face Generator 🎨")
+st.title("Anime Face Generator 🎨 (Keras Model)")
 
-model_path = "models/netG_epoch_20.pth"
-netG = load_generator(model_path)
+model = load_generator()
 
 if st.button("Generate New Face"):
-    image_tensor = generate_image(netG)
-    grid = make_grid(image_tensor, normalize=True).permute(1, 2, 0).numpy()
-    
-    st.image(grid, caption="Generated Anime Face", use_column_width=True)
+    img = generate_image(model)
+    st.image(img, caption="Generated Anime Face", use_column_width=True)
